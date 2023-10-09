@@ -1,12 +1,11 @@
 {
 	"name": "ai-waiter",
 	"private": true,
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
-		"start": "parcel src/index.html --dist-dir build --open --port 3000",
-		"build": "parcel build src/index.html --dist-dir build --public-url /ai-waiter --no-cache",
-		"deploy": "gh-pages -d build"
+		"start": "parcel public/index.html --dist-dir build --open --port 3000",
+		"build": "parcel build public/index.html --dist-dir build --public-url /ai-waiter --no-cache"
 	},
 	"browserslist": {
 		"production": ">0.2% and not dead and supports es6-module",
@@ -17,21 +16,28 @@
 		]
 	},
 	"dependencies": {
-		"chatgpt": "^4.7.0",
-		"react": "^18.2.0",
-		"react-dom": "^18.2.0"
+		"ajv": "^8.12.0",
+		"openai": "^4.12.1"
 	},
 	"devDependencies": {
-		"@types/dom-speech-recognition": "^0.0.1",
-		"@types/node": "^18.14.0",
-		"@types/react": "^18.0.28",
-		"@types/react-dom": "^18.0.11",
-		"buffer": "^5.7.1",
-		"events": "^3.3.0",
-		"gh-pages": "^5.0.0",
-		"parcel": "^2.8.3",
-		"process": "^0.11.10",
-		"typescript": "^4.9.5"
+		"@parcel/packager-raw-url": "^2.10.0",
+		"@parcel/transformer-webmanifest": "^2.10.0",
+		"@types/dom-speech-recognition": "^0.0.2",
+		"@types/node": "^20.8.5",
+		"@types/react": "^18.2.28",
+		"@types/react-dom": "^18.2.13",
+		"parcel": "^2.10.0",
+		"parcel-namer-rewrite": "^2.0.0-rc.3",
+		"typescript": "^5.2.2"
+	},
+	"alias": {
+		"process": false,
+		"buffer": false
+	},
+	"parcel-namer-rewrite": {
+		"rules": {
+			"([^/\\\\]*\\.(png|svg|ico))$": "assets/$1"
+		}
 	},
 	"homepage": "ai-waiter/"
 }

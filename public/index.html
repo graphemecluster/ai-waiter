@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" href="./favicon.ico" />
+		<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png" />
+		<link rel="manifest" href="./site.webmanifest" />
+		<link rel="mask-icon" href="./safari-pinned-tab.svg" color="#ffc40d" />
+		<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+		<meta name="apple-mobile-web-app-title" content="AI 侍應" />
+		<meta name="application-name" content="AI 侍應" />
+		<meta name="theme-color" content="#fffabd" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="Cantonese AI Waiter (Prototype)" />
+		<meta property="og:title" content="廣東話 AI 侍應" />
+		<meta property="og:description" content="Cantonese AI Waiter (Prototype)" />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://graphemecluster.github.io/ai-waiter/" />
+		<meta property="og:image" content="https://graphemecluster.github.io/ai-waiter/assets/logo.png" />
+		<title>廣東話 AI 侍應</title>
+	</head>
+	<body>
+		<div id="root">
+			<div id="form-container">
+				<header>
+					<img id="logo" src="./logo.png" alt="廣東話 AI 侍應" />
+					<div id="site-name">
+						<h1>廣東話 AI 侍應</h1>
+						<h2>Cantonese AI Waiter (Prototype)</h2>
+					</div>
+				</header>
+				<form id="key-input-form">
+					<input type="password" id="key-input" required />
+					<label id="key-input-label" for="key-input">Your OpenAI GPT-4 API Key</label>
+					<input type="submit" id="form-submit" value="開始" />
+				</form>
+				<p id="description">程式用嘅係瀏覽器／裝置內置嘅語音辨識同語音合成服務。AI 每次回應約值港幣 $1。</p>
+				<p id="not-supported"></p>
+				<div id="menu-container">
+					<h3 id="menu-hint">Menu (Click to Zoom)</h3>
+					<a id="menu-link" class="menu-link" href="./menu.png" target="_blank">
+						<img id="menu" src="./menu.png" alt="Menu" />
+					</a>
+					<p id="disclaimer">本程式僅作示範用途，同現實嘅「敏華冰廳」並冇任何關係。</p>
+					<p id="disclaimer-en">This program is not affilicated with Men Wah Bing Teng and is for demonstrative purpose only.</p>
+				</div>
+			</div>
+			<main id="main-container">
+				<div id="mic-container" class="action-container">
+					<div id="mic-button" class="action-button" role="button" title="講嘢">
+						<div id="mic">
+							<div id="mic-base"></div>
+						</div>
+					</div>
+				</div>
+				<div id="menu-container" class="action-container">
+					<a id="menu-button" class="menu-link action-button" href="./menu.png" target="_blank" title="睇餐牌">
+						<div id="menu-lines"></div>
+					</a>
+				</div>
+				<div id="restart-container" class="action-container">
+					<div class="restart-button action-button" role="button" title="重新開始"></div>
+				</div>
+				<div id="customer"></div>
+				<div id="waiter"></div>
+			</main>
+			<div id="result-container">
+				<div id="receipt">
+					<div id="title">敏華冰廳</div>
+					<div id="subtitle">收據</div>
+					<table id="items"></table>
+				</div>
+				<div id="message">已通知職員</div>
+				<div id="buttons-container">
+					<div id="back-button" role="button" title="返回">
+						<div id="back"></div>
+					</div>
+					<div id="back-content"></div>
+					<div id="retry-button" class="restart-button" role="button" title="重試"></div>
+					<div id="retry-content">重試</div>
+				</div>
+			</div>
+		</div>
+		<script type="module" src="../src/index.tsx"></script>
+	</body>
+</html>

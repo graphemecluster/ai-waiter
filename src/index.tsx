@@ -1,130 +1,224 @@
-import { ChatGPTAPI, ChatMessage } from "chatgpt/build";
-import { prompt, dishes, beverages, Dish, Beverage, printToTable } from "./utils";
+import OpenAI from "openai";
+import { dishes, beverages, Dish, Beverage, initialPrompt, functions, validate } from "./consts";
+import { recognize, speak } from "./speech";
+import { printToTable, createTableRow, gatherReceiptItems } from "./utils";
 import "./index.css";
-
-const apiKey = new URLSearchParams(location.search).get("apiKey");
-
-if (!apiKey) {
-	document.getElementById("customer")!.style.display = "none";
-	document.getElementById("waiter")!.style.display = "none";
-	document.getElementById("receipt")!.style.display = "none";
-	document.getElementById("message")!.textContent = "Missing API Key; append `?apiKey=…` to URL";
-	throw new Error("Missing API Key; append `?apiKey=…` to URL");
-}
-
-const recognition = new webkitSpeechRecognition();
-recognition.lang = "zh-HK";
-recognition.interimResults = true;
-
-const api = new ChatGPTAPI({
-	apiKey,
-	userLabel: "客人",
-	assistantLabel: "侍應",
-	completionParams: {
-		max_tokens: 512,
-		temperature: 0.2,
-	},
-});
-
-// { style: "currency", currency: "HKD", currencyDisplay: "narrowSymbol" }
-const formatPrice = new Intl.NumberFormat("zh-HK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format;
-const formatTime = new Intl.DateTimeFormat("zh-HK", { dateStyle: "short", timeStyle: "short", hour12: false }).format;
-
-type State = "customerPreparing" | "customerThinking" | "customerSpeaking" | "waiterPreparing" | "waiterThinking" | "waiterSpeaking";
-
-let response = {} as ChatMessage;
-
-let customer = "";
-let waiter = "你好，要嗌咩？";
-let state: State;
 
 const divCustomer = document.getElementById("customer") as HTMLDivElement;
 const divWaiter = document.getElementById("waiter") as HTMLDivElement;
 const divMessage = document.getElementById("message") as HTMLDivElement;
 const divReceipt = document.getElementById("receipt") as HTMLDivElement;
+const tableItems = document.getElementById("items") as HTMLTableElement;
+const mainContainer = document.getElementById("main-container") as HTMLDivElement;
+const micButton = document.getElementById("mic-button") as HTMLDivElement;
+const keyInput = document.getElementById("key-input") as HTMLInputElement;
+const keyInputForm = document.getElementById("key-input-form") as HTMLFormElement;
+const formContainer = document.getElementById("form-container") as HTMLFormElement;
+const resultContainer = document.getElementById("result-container") as HTMLFormElement;
+const backButton = document.getElementById("back-button") as HTMLDivElement;
+const backContent = document.getElementById("back-content") as HTMLDivElement;
+const imgMenu = document.getElementById("menu") as HTMLImageElement;
+const menuLinks = document.getElementsByClassName("menu-link");
+const restartButtons = document.getElementsByClassName("restart-button");
 
-divMessage.style.display = "none";
-divReceipt.style.display = "none";
-
-function handleRecognitionResult(event: SpeechRecognitionEvent) {
-	const result = event.results[0];
-	const text = result?.[0]?.transcript;
-	if (text) customer = text;
-	setState(result?.isFinal ? (text ? "waiterPreparing" : "customerPreparing") : "customerSpeaking");
-}
-
-function setState(newState: State) {
-	if (newState !== state) {
-		switch ((state = newState)) {
-			case "customerPreparing":
-				recognition.addEventListener("result", handleRecognitionResult);
-				recognition.start();
-				setState("customerThinking");
-				break;
-			case "waiterPreparing":
-				recognition.removeEventListener("result", handleRecognitionResult);
-				api
-					.sendMessage(customer, {
-						promptPrefix: prompt,
-						onProgress: res => {
-							waiter = res.text;
-							setState("waiterSpeaking");
-						},
-						conversationId: response.conversationId,
-						parentMessageId: response.id,
-					})
-					.then(res => {
-						response = res;
-						waiter = res.text;
-						if (parseResponse(waiter)) setState("customerPreparing");
-						else {
-							divCustomer.style.display = "none";
-							divWaiter.style.display = "none";
-						}
-					});
-				setState("waiterThinking");
-				break;
+let menuWindow: Window | null;
+for (const menuLink of menuLinks)
+	menuLink.addEventListener("click", event => {
+		if (menuWindow && !menuWindow.closed) {
+			menuWindow.focus();
+			event.preventDefault();
+			return;
 		}
-		divCustomer.style.color = state === "customerPreparing" || state === "customerThinking" ? "darkgrey" : "";
-		divWaiter.style.color = state === "waiterPreparing" || state === "waiterThinking" ? "gainsboro" : "";
+		menuWindow = open(imgMenu.src, "menuWindow", `width=${imgMenu.naturalWidth},height=${imgMenu.naturalHeight}`);
+		if (menuWindow) {
+			function menuLoaded() {
+				menuWindow!.document.documentElement.style.height = "100%";
+				Object.assign(menuWindow!.document.body.style, { height: "100%", backgroundColor: "white" });
+			}
+			menuWindow.addEventListener("DOMContentLoaded", menuLoaded);
+			menuWindow.addEventListener("load", menuLoaded);
+			event.preventDefault();
+		}
+	});
+
+let apiKey = new URLSearchParams(location.search).get("apiKey") || "";
+if (apiKey) keyInput.value = apiKey;
+keyInput.addEventListener("input", () => {
+	apiKey = keyInput.value;
+	const queries = { apiKey };
+	history.replaceState(queries, document.title, location.pathname + (apiKey && `?${new URLSearchParams(queries)}`));
+});
+
+let openai: OpenAI;
+
+mainContainer.style.display = "none";
+resultContainer.style.display = "none";
+
+let messages: ReturnType<typeof initialPrompt>;
+
+let customer = "";
+let waiter = "";
+
+divWaiter.textContent = waiter;
+
+async function startConversation(signal: AbortSignal) {
+	if (!apiKey) return;
+	openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+	formContainer.style.display = "none";
+	mainContainer.style.display = "";
+	resultContainer.style.display = "none";
+	messages = initialPrompt();
+	divCustomer.textContent = "";
+	divWaiter.style.color = "";
+	divWaiter.textContent = waiter = "你好，要乜嘢？";
+	await speak(waiter, signal);
+	while (true) {
+		while (true) {
+			if (resultContainer.style.display) {
+				divCustomer.style.color = "darkgrey";
+				divCustomer.textContent = "請講嘢……";
+				customer = "";
+				for await (customer of recognize(micButton, signal)) {
+					divCustomer.style.color = "";
+					divCustomer.textContent = customer;
+				}
+				if (customer) break;
+			}
+			divCustomer.style.color = "darkgrey";
+			divCustomer.textContent = "撳一下個咪開始講嘢";
+			await new Promise((resolve, reject) => {
+				micButton.addEventListener("click", resolve, { once: true });
+				signal.addEventListener(
+					"abort",
+					() => {
+						micButton.removeEventListener("click", resolve);
+						reject(signal.reason);
+					},
+					{ once: true }
+				);
+			});
+		}
+		messages.push({ role: "user", content: customer });
+		divWaiter.style.color = "gainsboro";
+		divWaiter.textContent = "諗緊……";
+		let response = await askForResponse(signal);
+		while (true) {
+			const functionCall = response?.function_call;
+			if (!functionCall || !((name): name is keyof typeof methods => name in methods)(functionCall.name)) break;
+			const result = methods[functionCall.name](functionCall.arguments);
+			messages.push({
+				role: "function",
+				name: functionCall.name,
+				content: JSON.stringify(result, undefined, 2),
+			});
+			response = await askForResponse(signal);
+			if (response?.content && result.success) {
+				mainContainer.style.display = "none";
+				resultContainer.style.display = "";
+				break;
+			}
+		}
 	}
-	divCustomer.textContent = state === "customerPreparing" || state === "customerThinking" ? "請講嘢……" : customer;
-	divWaiter.textContent = state === "waiterPreparing" || state === "waiterThinking" ? "諗緊……" : waiter;
 }
 
-setState("customerPreparing");
-
-function parseResponse(text: string) {
-	if (text.includes("NOTIFY_STAFF")) {
-		divMessage.style.display = "";
-		divMessage.textContent = "已通知職員";
-		return false;
+async function askForResponse(signal: AbortSignal) {
+	const response = await openai.chat.completions.create(
+		{
+			model: "gpt-4",
+			max_tokens: 512,
+			temperature: 0.2,
+			messages,
+			functions,
+		},
+		{ signal }
+	);
+	const message = response.choices[0]?.message;
+	if (message) {
+		messages.push(message);
+		if (message.content) {
+			divWaiter.style.color = "";
+			divWaiter.textContent = waiter = message.content;
+			await speak(waiter, signal);
+		}
 	}
-	const index = text.indexOf("PLACE_ORDER");
-	if (index !== -1) {
-		const ids = text
-			.slice(index + 11)
-			.split(" ")
-			.reduce((arr, item) => {
-				if (item) {
-					if (item === "H" || item === "C") arr[arr.length - 1] += item;
-					else arr.push(item);
+	return message;
+}
+
+async function startAbortableConversation(event?: SubmitEvent) {
+	event?.preventDefault();
+	const controller = new AbortController();
+	const { signal } = controller;
+	for (const restartButton of restartButtons)
+		restartButton.addEventListener(
+			"click",
+			() => {
+				controller.abort(new OpenAI.APIUserAbortError());
+				if (restartButton.parentNode !== resultContainer) {
+					restartButton.classList.remove("rotate");
+					(restartButton as HTMLDivElement).offsetWidth; // Trigger DOM reflow
+					restartButton.classList.add("rotate");
 				}
-				return arr;
-			}, [] as string[]);
+				startAbortableConversation();
+			},
+			{ signal }
+		);
+	try {
+		await startConversation(signal);
+	} catch (error: any) {
+		if (error instanceof OpenAI.APIUserAbortError) return;
+		divWaiter.style.color = "red";
+		divWaiter.textContent = error.message;
+	}
+}
+
+keyInputForm.addEventListener("submit", startAbortableConversation);
+
+backButton.addEventListener("click", () => {
+	mainContainer.style.display = "";
+	resultContainer.style.display = "none";
+});
+
+const formatPrice = new Intl.NumberFormat("zh-HK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format;
+const formatTime = new Intl.DateTimeFormat("zh-HK", { dateStyle: "short", timeStyle: "short", hour12: false }).format;
+
+const methods = {
+	notify_staff() {
+		divReceipt.style.display = "none";
+		divMessage.style.display = "";
+		backContent.textContent = "撳返回繼續同侍應對話";
+		return { success: true };
+	},
+	place_order(response: string) {
+		let order: any;
+		try {
+			order = JSON.parse(response);
+		} catch ({ message }: any) {
+			return {
+				success: false,
+				reason: "JSON parse error",
+				message,
+			};
+		}
+		if (!validate(order)) {
+			return {
+				success: false,
+				reason: "JSON validate errors",
+				errors: validate.errors,
+			};
+		}
 		const foods: Dish[] = [];
 		const drinks: (Beverage & { cold: boolean })[] = [];
-		for (let id of ids) {
-			if (id in dishes) foods.push({ ...dishes[id]! });
-			else {
-				const final = id.slice(-1);
-				let cold = false;
-				if (final === "C") {
-					cold = true;
-					id = id.slice(0, -1);
-				} else if (final === "H") id = id.slice(0, -1);
-				if (id in beverages) drinks.push({ ...beverages[id]!, cold });
-			}
+		const invalidIds: string[] = [];
+		for (const { id, beverage_type, quantity } of order.order) {
+			if (id in dishes) foods.push(...Array.from({ length: quantity }, () => ({ ...dishes[id]! })));
+			else if (id in beverages) drinks.push(...Array.from({ length: quantity }, () => ({ ...beverages[id]!, cold: beverage_type === "cold" })));
+			else invalidIds.push(id);
+		}
+		if (invalidIds.length) {
+			return {
+				success: false,
+				reason: "Invalid item ids: " + invalidIds.join(", "),
+			};
 		}
 		const receipt = foods.map(({ name, price }) => ({ name, price }));
 		let i = foods.length;
@@ -135,9 +229,7 @@ function parseResponse(text: string) {
 			const subtotal = receipt.reduce((prev, { price }) => prev + price, 0);
 			const caption = document.createElement("caption");
 			caption.textContent = `單號：123456\n時間：${formatTime(new Date())}`;
-			const tableItems = printToTable(["項目", "數量", "金額"], gatherReceiptItems(receipt), ["name", "amount", "price"], { price: formatPrice });
-			tableItems.id = "items";
-			tableItems.insertBefore(caption, tableItems.firstElementChild);
+			printToTable(tableItems, caption, ["項目", "數量", "金額"], gatherReceiptItems(receipt), ["name", "amount", "price"], { price: formatPrice });
 
 			const tableBodyBottom = document.createElement("tbody");
 			tableBodyBottom.appendChild(createTableRow("小計", formatPrice(subtotal)));
@@ -150,48 +242,13 @@ function parseResponse(text: string) {
 			tableItems.appendChild(tableFoot);
 
 			divReceipt.style.display = "";
-			divReceipt.appendChild(tableItems);
-			return false;
+			divMessage.style.display = "none";
+			backContent.textContent = "如收據有誤，請撳返回並叫侍應更正。";
+			return { success: true };
 		}
-	}
-	return true;
-}
-
-function createTableRow(head: string, value: string) {
-	const tableRow = document.createElement("tr");
-	const tableHeaderCell = document.createElement("th");
-	tableHeaderCell.textContent = head;
-	tableRow.appendChild(tableHeaderCell);
-	tableRow.appendChild(document.createElement("td"));
-	const tableDataCell = document.createElement("td");
-	tableDataCell.textContent = value;
-	tableRow.appendChild(tableDataCell);
-	return tableRow;
-}
-
-// By ChatGPT
-
-type ReceiptItem = {
-	name: string;
-	price: number;
+		return {
+			success: false,
+			reason: "No valid items",
+		};
+	},
 };
-
-type GatheredReceiptItem = {
-	name: string;
-	amount: number;
-	price: number;
-};
-
-function gatherReceiptItems(receipt: ReceiptItem[]): GatheredReceiptItem[] {
-	const gatheredItemsMap = new Map<string, GatheredReceiptItem>();
-
-	receipt.forEach(({ name, price }) => {
-		const existingItem = gatheredItemsMap.get(name);
-		if (existingItem) {
-			existingItem.amount++;
-			existingItem.price += price;
-		} else gatheredItemsMap.set(name, { name, amount: 1, price });
-	});
-
-	return Array.from(gatheredItemsMap.values());
-}
