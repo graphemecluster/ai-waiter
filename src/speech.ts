@@ -30,14 +30,18 @@ export function recognize(button: HTMLElement, signal: AbortSignal) {
 				recognition.stop();
 				recognition.removeEventListener("result", handleRecognitionResult);
 				recognition.removeEventListener("end", endRecognition);
-				recognition.removeEventListener("error", endRecognition);
+				recognition.removeEventListener("error", onError);
 				button.removeEventListener("click", endRecognition);
 				button.classList.remove("enabled");
 				resolve({ value: undefined, done: true });
 			}
+			function onError(event: SpeechRecognitionErrorEvent) {
+				reject(event);
+				endRecognition();
+			}
 			recognition.addEventListener("result", handleRecognitionResult);
 			recognition.addEventListener("end", endRecognition);
-			recognition.addEventListener("error", endRecognition);
+			recognition.addEventListener("error", onError);
 			button.addEventListener("click", endRecognition);
 			button.classList.add("enabled");
 			recognition.start();
