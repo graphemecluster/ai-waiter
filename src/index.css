@@ -511,3 +511,55 @@ h2 {
 		transform: rotate(360deg);
 	}
 }
+
+/* https://tholman.com/github-corners/ */
+.github-corner {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: 0;
+	clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
+}
+.github-corner svg {
+	fill: #0f89bc;
+	color: #f2f9ff;
+	width: 120px;
+	height: 120px;
+}
+.octo-arm {
+	transform-origin: 130px 106px;
+}
+.github-corner:hover .octo-arm {
+	animation: octocat-wave 560ms ease-in-out;
+}
+@keyframes octocat-wave {
+	0%,
+	100% {
+		transform: rotate(0);
+	}
+	20%,
+	60% {
+		transform: rotate(-25deg);
+	}
+	40%,
+	80% {
+		transform: rotate(10deg);
+	}
+}
+@media (max-width: 840px) {
+	.github-corner svg {
+		width: 100px;
+		height: 100px;
+	}
+}
+@media (max-width: 660px) {
+	.github-corner svg {
+		width: 80px;
+		height: 80px;
+	}
+}
+@media (max-width: 540px) {
+	.github-corner .octo-arm {
+		animation: octocat-wave 560ms ease-in-out;
+	}
+}
