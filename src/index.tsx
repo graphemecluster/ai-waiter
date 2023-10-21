@@ -70,6 +70,7 @@ async function startConversation(signal: AbortSignal) {
 	messages = initialPrompt();
 	divCustomer.textContent = "";
 	divWaiter.style.color = "";
+	divWaiter.style.backgroundColor = "";
 	divWaiter.textContent = waiter = "你好，要乜嘢？";
 	await speak(waiter, signal);
 	while (true) {
@@ -167,7 +168,8 @@ async function startAbortableConversation(event?: SubmitEvent) {
 	} catch (error: any) {
 		if (error instanceof OpenAI.APIUserAbortError) return;
 		controller.abort(new OpenAI.APIUserAbortError());
-		divWaiter.style.color = "red";
+		divWaiter.style.color = "";
+		divWaiter.style.backgroundColor = "red";
 		divWaiter.textContent = error.message;
 	}
 }
