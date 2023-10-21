@@ -58,7 +58,7 @@ export function recognize(button: HTMLElement, signal: AbortSignal) {
 	};
 }
 
-let utteranceVoice: SpeechSynthesisVoice | null;
+let utteranceVoice: SpeechSynthesisVoice;
 if (typeof speechSynthesis === "undefined") {
 	document.getElementById("not-supported")!.textContent = "你嘅瀏覽器唔支援語音合成服務，無法使用本程式。請使用其他瀏覽器。";
 	(document.getElementById("form-submit") as HTMLInputElement).disabled = true;
@@ -68,21 +68,23 @@ if (typeof speechSynthesis === "undefined") {
 }
 
 function setLanguage() {
-	const voices = speechSynthesis
-		.getVoices()
-		.reverse()
-		.map(voice => {
-			const { language, script, region } = new Intl.Locale(voice.lang);
-			return { voice, score: (+(language === "yue") << 2) | (+(script === "Hant") << 1) | +(region === "HK") };
-		})
-		.sort((left, right) => right.score - left.score);
-	recognition.lang = voices[0]?.score ? voices[0].voice.lang : "zh-yue-Hant-HK";
-	utteranceVoice = (voices[0]?.score && voices.find(({ voice }) => voice.localService)?.voice) || null;
+	recognition.lang = "zh-HK";
+	let score = 4;
+	for (const voice of speechSynthesis.getVoices()) {
+		const { language, script, region } = new Intl.Locale(voice.lang);
+		const currScore =
+			(+(language === "yue") << 4) | (+(script === "Hant") << 3) | (+(region === "HK") << 2) | (+(language === "zh") << 1) | +voice.localService;
+		if (currScore >= score && (currScore & ~1) !== 10) {
+			score = currScore;
+			recognition.lang = voice.lang;
+			utteranceVoice = voice;
+		}
+	}
 }
 
 export async function speak(text: string, signal: AbortSignal) {
 	const utterance = new SpeechSynthesisUtterance(text);
-	utterance.voice = utteranceVoice;
+	utteranceVoice ? (utterance.voice = utteranceVoice) : (utterance.lang = recognition.lang);
 	utterance.rate = 1.1;
 	speechSynthesis.speak(utterance);
 	await new Promise((resolve, reject) => {
