@@ -186,7 +186,7 @@ async function startAbortableConversation(event?: SubmitEvent) {
 		controller.abort(new OpenAI.APIUserAbortError());
 		divWaiter.style.color = "";
 		divWaiter.style.backgroundColor = "red";
-		divWaiter.textContent = error.message;
+		divWaiter.textContent = `${error.name || ""}${error.name && error.message ? ": " : ""}${error.message || ""}`;
 	}
 }
 
