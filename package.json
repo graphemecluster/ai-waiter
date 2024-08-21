@@ -16,19 +16,16 @@
 		]
 	},
 	"dependencies": {
-		"ajv": "^8.12.0",
-		"openai": "^4.12.1"
+		"ajv": "^8.17.1",
+		"openai": "^4.56.0"
 	},
 	"devDependencies": {
-		"@parcel/packager-raw-url": "^2.10.0",
-		"@parcel/transformer-webmanifest": "^2.10.0",
-		"@types/dom-speech-recognition": "^0.0.2",
-		"@types/node": "^20.8.5",
-		"@types/react": "^18.2.28",
-		"@types/react-dom": "^18.2.13",
-		"parcel": "^2.10.0",
-		"parcel-namer-rewrite": "^2.0.0-rc.3",
-		"typescript": "^5.2.2"
+		"@parcel/packager-raw-url": "^2.12.0",
+		"@parcel/transformer-webmanifest": "^2.12.0",
+		"@types/dom-speech-recognition": "^0.0.4",
+		"parcel": "^2.12.0",
+		"parcel-namer-rewrite": "^2.10.3-rc.2",
+		"typescript": "^5.5.4"
 	},
 	"alias": {
 		"process": false,
