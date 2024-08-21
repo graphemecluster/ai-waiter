@@ -4,6 +4,7 @@ if (typeof webkitSpeechRecognition === "undefined") {
 	(document.getElementById("form-submit") as HTMLInputElement).disabled = true;
 } else {
 	recognition = new webkitSpeechRecognition();
+	recognition.lang = "yue-Hant-HK";
 	recognition.interimResults = true;
 }
 
@@ -68,7 +69,6 @@ if (typeof speechSynthesis === "undefined") {
 }
 
 function setLanguage() {
-	recognition.lang = "zh-HK";
 	let score = 4;
 	for (const voice of speechSynthesis.getVoices()) {
 		const { language, script, region } = new Intl.Locale(voice.lang);
@@ -76,7 +76,6 @@ function setLanguage() {
 			(+(language === "yue") << 4) | (+(script === "Hant") << 3) | (+(region === "HK") << 2) | (+(language === "zh") << 1) | +voice.localService;
 		if (currScore >= score && (currScore & ~1) !== 10) {
 			score = currScore;
-			recognition.lang = voice.lang;
 			utteranceVoice = voice;
 		}
 	}
