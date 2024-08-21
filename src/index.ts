@@ -1,8 +1,11 @@
 import OpenAI from "openai";
-import { dishes, beverages, Dish, Beverage, initialPrompt, functions, validate } from "./consts";
+
+import { beverages, dishes, initialPrompt, tools } from "./consts";
 import { recognize, speak } from "./speech";
-import { printToTable, createTableRow, gatherReceiptItems } from "./utils";
+import { createTableRow, gatherReceiptItems, printToTable } from "./utils";
 import "./index.css";
+
+import type { Beverage, Dish, Item } from "./consts";
 
 const divCustomer = document.getElementById("customer") as HTMLDivElement;
 const divWaiter = document.getElementById("waiter") as HTMLDivElement;
@@ -104,16 +107,19 @@ async function startConversation(signal: AbortSignal) {
 		divWaiter.textContent = "諗緊……";
 		let response = await askForResponse(signal);
 		while (true) {
-			const functionCall = response?.function_call;
-			if (!functionCall || !((name): name is keyof typeof methods => name in methods)(functionCall.name)) break;
-			const result = methods[functionCall.name](functionCall.arguments);
-			messages.push({
-				role: "function",
-				name: functionCall.name,
-				content: JSON.stringify(result, undefined, 2),
-			});
+			const toolCalls = response?.tool_calls;
+			if (!toolCalls?.length) break;
+			for (const { id, function: toolCall } of toolCalls) {
+				if (((name): name is keyof typeof methods => name in methods)(toolCall.name))
+					messages.push({
+						role: "tool",
+						["name" as never]: toolCall.name,
+						content: JSON.stringify(methods[toolCall.name](toolCall.arguments), undefined, 2),
+						tool_call_id: id,
+					});
+			}
 			response = await askForResponse(signal);
-			if (response?.content && result.success) {
+			if (response?.content) {
 				mainContainer.style.display = "none";
 				resultContainer.style.display = "";
 				break;
@@ -125,11 +131,12 @@ async function startConversation(signal: AbortSignal) {
 async function askForResponse(signal: AbortSignal) {
 	const response = await openai.chat.completions.create(
 		{
-			model: "gpt-4",
+			model: "gpt-4o-mini-2024-07-18",
 			max_tokens: 512,
 			temperature: 0.2,
 			messages,
-			functions,
+			tools,
+			parallel_tool_calls: false,
 		},
 		{ signal }
 	);
@@ -192,7 +199,7 @@ const methods = {
 		return { success: true };
 	},
 	place_order(response: string) {
-		let order: any;
+		let order: { order: Item[] };
 		try {
 			order = JSON.parse(response);
 		} catch ({ message }: any) {
@@ -202,13 +209,8 @@ const methods = {
 				message,
 			};
 		}
-		if (!validate(order)) {
-			return {
-				success: false,
-				reason: "JSON validate errors",
-				errors: validate.errors,
-			};
-		}
+		// The response is guaranteed to match the schema, thus validation is not needed:
+		// https://platform.openai.com/docs/guides/structured-outputs
 		const foods: Dish[] = [];
 		const drinks: (Beverage & { cold: boolean })[] = [];
 		const invalidIds: string[] = [];

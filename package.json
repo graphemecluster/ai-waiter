@@ -16,13 +16,14 @@
 		]
 	},
 	"dependencies": {
-		"ajv": "^8.17.1",
-		"openai": "^4.56.0"
+		"openai": "^4.56.0",
+		"seedrandom": "^3.0.5"
 	},
 	"devDependencies": {
 		"@parcel/packager-raw-url": "^2.12.0",
 		"@parcel/transformer-webmanifest": "^2.12.0",
 		"@types/dom-speech-recognition": "^0.0.4",
+		"@types/seedrandom": "^3.0.8",
 		"parcel": "^2.12.0",
 		"parcel-namer-rewrite": "^2.10.3-rc.2",
 		"typescript": "^5.5.4"
