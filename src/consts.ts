@@ -367,3 +367,7 @@ export const tools: OpenAI.Chat.ChatCompletionTool[] = [
 		},
 	},
 ];
+
+export class SpeakAgainAbortError extends Error {
+	override name = "SpeakAgainAbortError";
+}

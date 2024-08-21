@@ -491,6 +491,50 @@ h2 {
 #restart-container {
 	left: 260px;
 }
+#speak-again-container {
+	left: 390px;
+}
+#speak-again-button:before {
+	position: absolute;
+	content: "";
+	top: 30px;
+	left: 30px;
+	width: 55px;
+	height: 40px;
+	border: 5px solid grey;
+	border-left: 0;
+	border-radius: 5px;
+}
+#speak-again-button:after {
+	position: absolute;
+	content: "";
+	top: 34.5px;
+	left: 19px;
+	width: 30.5px;
+	height: 30.5px;
+	border: 5px solid grey;
+	border-top: 0;
+	border-right: 0;
+	border-radius: 5px;
+	transform: rotate(45deg);
+}
+#cross-mark:before,
+#cross-mark:after {
+	position: absolute;
+	content: "";
+	top: 48px;
+	left: 40px;
+	width: 28px;
+	height: 4px;
+	background-color: grey;
+	border-radius: 5px;
+}
+#cross-mark:before {
+	transform: rotate(45deg);
+}
+#cross-mark:after {
+	transform: rotate(-45deg);
+}
 #retry-button {
 	margin: -25px;
 	transform: scale(0.5);

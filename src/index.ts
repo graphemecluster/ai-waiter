@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-import { beverages, dishes, initialPrompt, tools } from "./consts";
+import { beverages, dishes, initialPrompt, SpeakAgainAbortError, tools } from "./consts";
 import { recognize, speak } from "./speech";
 import { createTableRow, gatherReceiptItems, printToTable } from "./utils";
 import "./index.css";
@@ -23,6 +23,7 @@ const backContent = document.getElementById("back-content") as HTMLDivElement;
 const imgMenu = document.getElementById("menu") as HTMLImageElement;
 const menuLinks = document.getElementsByClassName("menu-link");
 const restartButtons = document.getElementsByClassName("restart-button");
+const speakAgainButton = document.getElementById("speak-again-button") as HTMLDivElement;
 
 let menuWindow: Window | null;
 for (const menuLink of menuLinks)
@@ -78,21 +79,29 @@ async function startConversation(signal: AbortSignal) {
 	await speak(waiter, signal);
 	while (true) {
 		while (true) {
+			const speakAgainController = new AbortController();
+			const { signal: speakAgainSignal } = speakAgainController;
+			const restartOrSpeakAgainSignal = AbortSignal.any([signal, speakAgainSignal]);
 			if (resultContainer.style.display) {
+				speakAgainButton.addEventListener("click", () => speakAgainController.abort(new SpeakAgainAbortError()), { signal });
 				divCustomer.style.color = "darkgrey";
 				divCustomer.textContent = "請講嘢……";
 				customer = "";
-				for await (customer of recognize(micButton, signal)) {
-					divCustomer.style.color = "";
-					divCustomer.textContent = customer;
+				try {
+					for await (customer of recognize(micButton, restartOrSpeakAgainSignal)) {
+						divCustomer.style.color = "";
+						divCustomer.textContent = customer;
+					}
+					if (customer) break;
+				} catch (error) {
+					if (!(error instanceof SpeakAgainAbortError)) throw error;
 				}
-				if (customer) break;
 			}
 			divCustomer.style.color = "darkgrey";
 			divCustomer.textContent = "撳一下個咪開始講嘢";
 			await new Promise((resolve, reject) => {
 				micButton.addEventListener("click", resolve, { once: true });
-				signal.addEventListener(
+				restartOrSpeakAgainSignal.addEventListener(
 					"abort",
 					() => {
 						micButton.removeEventListener("click", resolve);
