@@ -187,6 +187,17 @@ async function startAbortableConversation(event?: SubmitEvent) {
 		divWaiter.style.color = "";
 		divWaiter.style.backgroundColor = "red";
 		divWaiter.textContent = `${error.name || ""}${error.name && error.message ? ": " : ""}${error.message || ""}`;
+		const restartController = new AbortController();
+		const { signal: restartSignal } = restartController;
+		for (const restartButton of restartButtons)
+			restartButton.addEventListener(
+				"click",
+				() => {
+					restartController.abort();
+					startAbortableConversation();
+				},
+				{ signal: restartSignal }
+			);
 	}
 }
 
