@@ -371,3 +371,12 @@ export const tools: OpenAI.Chat.ChatCompletionTool[] = [
 export class SpeakAgainAbortError extends Error {
 	override name = "SpeakAgainAbortError";
 }
+
+export const speechRecognitionErrorToMessage: Partial<Record<SpeechRecognitionErrorCode, string>> = {
+	"audio-capture": "聽唔到你把聲，請檢查下你個咪。",
+	"bad-grammar": "語音辨識有文法錯誤",
+	"language-not-supported": "瀏覽器唔支援廣東話語音辨識",
+	"network": "語音辨識發生網絡錯誤",
+	"not-allowed": "瀏覽器唔畀語音辨識",
+	"service-not-allowed": "瀏覽器唔畀語音辨識",
+};

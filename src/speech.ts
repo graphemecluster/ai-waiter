@@ -37,7 +37,7 @@ export function recognize(button: HTMLElement, signal: AbortSignal) {
 				resolve({ value: undefined, done: true });
 			}
 			function onError(event: SpeechRecognitionErrorEvent) {
-				reject(event);
+				if (event.error !== "no-speech" && event.error !== "aborted") reject(event);
 				endRecognition();
 			}
 			recognition.addEventListener("result", handleRecognitionResult);
@@ -45,7 +45,12 @@ export function recognize(button: HTMLElement, signal: AbortSignal) {
 			recognition.addEventListener("error", onError);
 			button.addEventListener("click", endRecognition);
 			button.classList.add("enabled");
-			recognition.start();
+			try {
+				recognition.start();
+			} catch (error: any) {
+				if (error.name !== "InvalidStateError") throw error;
+				// How come the recognition isn’t ended?
+			}
 			signal.addEventListener(
 				"abort",
 				() => {

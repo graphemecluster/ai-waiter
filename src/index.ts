@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-import { beverages, dishes, initialPrompt, SpeakAgainAbortError, tools } from "./consts";
+import { beverages, dishes, initialPrompt, SpeakAgainAbortError, speechRecognitionErrorToMessage, tools } from "./consts";
 import { recognize, speak } from "./speech";
 import { createTableRow, gatherReceiptItems, printToTable } from "./utils";
 import "./index.css";
@@ -193,7 +193,10 @@ async function startAbortableConversation(event?: SubmitEvent) {
 		controller.abort(new OpenAI.APIUserAbortError());
 		divWaiter.style.color = "";
 		divWaiter.style.backgroundColor = "red";
-		divWaiter.textContent = `${error.name || ""}${error.name && error.message ? ": " : ""}${error.message || ""}`;
+		divWaiter.textContent =
+			(error instanceof SpeechRecognitionErrorEvent
+				? speechRecognitionErrorToMessage[error.error]
+				: `${error.name || ""}${error.name && error.message ? ": " : ""}${error.message || ""}`) || "發生未知錯誤";
 		micButton.disabled = true;
 		speakAgainButton.disabled = true;
 		const restartController = new AbortController();
