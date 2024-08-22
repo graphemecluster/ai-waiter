@@ -13,17 +13,17 @@ const divMessage = document.getElementById("message") as HTMLDivElement;
 const divReceipt = document.getElementById("receipt") as HTMLDivElement;
 const tableItems = document.getElementById("items") as HTMLTableElement;
 const mainContainer = document.getElementById("main-container") as HTMLDivElement;
-const micButton = document.getElementById("mic-button") as HTMLDivElement;
+const micButton = document.getElementById("mic-button") as HTMLButtonElement;
 const keyInput = document.getElementById("key-input") as HTMLInputElement;
 const keyInputForm = document.getElementById("key-input-form") as HTMLFormElement;
 const formContainer = document.getElementById("form-container") as HTMLFormElement;
 const resultContainer = document.getElementById("result-container") as HTMLFormElement;
-const backButton = document.getElementById("back-button") as HTMLDivElement;
+const backButton = document.getElementById("back-button") as HTMLButtonElement;
 const backContent = document.getElementById("back-content") as HTMLDivElement;
 const imgMenu = document.getElementById("menu") as HTMLImageElement;
 const menuLinks = document.getElementsByClassName("menu-link");
 const restartButtons = document.getElementsByClassName("restart-button");
-const speakAgainButton = document.getElementById("speak-again-button") as HTMLDivElement;
+const speakAgainButton = document.getElementById("speak-again-button") as HTMLButtonElement;
 
 let menuWindow: Window | null;
 for (const menuLink of menuLinks)
@@ -76,14 +76,17 @@ async function startConversation(signal: AbortSignal) {
 	divWaiter.style.color = "";
 	divWaiter.style.backgroundColor = "";
 	divWaiter.textContent = waiter = "你好，要乜嘢？";
+	micButton.disabled = true;
+	speakAgainButton.disabled = true;
 	await speak(waiter, signal);
 	while (true) {
+		micButton.disabled = false;
 		while (true) {
 			const speakAgainController = new AbortController();
 			const { signal: speakAgainSignal } = speakAgainController;
 			const restartOrSpeakAgainSignal = AbortSignal.any([signal, speakAgainSignal]);
 			if (resultContainer.style.display) {
-				speakAgainButton.addEventListener("click", () => speakAgainController.abort(new SpeakAgainAbortError()), { signal });
+				speakAgainButton.addEventListener("click", () => customer && speakAgainController.abort(new SpeakAgainAbortError()), { signal });
 				divCustomer.style.color = "darkgrey";
 				divCustomer.textContent = "請講嘢……";
 				customer = "";
@@ -91,12 +94,14 @@ async function startConversation(signal: AbortSignal) {
 					for await (customer of recognize(micButton, restartOrSpeakAgainSignal)) {
 						divCustomer.style.color = "";
 						divCustomer.textContent = customer;
+						speakAgainButton.disabled = false;
 					}
 					if (customer) break;
 				} catch (error) {
 					if (!(error instanceof SpeakAgainAbortError)) throw error;
 				}
 			}
+			speakAgainButton.disabled = true;
 			divCustomer.style.color = "darkgrey";
 			divCustomer.textContent = "撳一下個咪開始講嘢";
 			await new Promise((resolve, reject) => {
@@ -114,6 +119,8 @@ async function startConversation(signal: AbortSignal) {
 		messages.push({ role: "user", content: customer });
 		divWaiter.style.color = "gainsboro";
 		divWaiter.textContent = "諗緊……";
+		micButton.disabled = true;
+		speakAgainButton.disabled = true;
 		let response = await askForResponse(signal);
 		while (true) {
 			const toolCalls = response?.tool_calls;
@@ -172,7 +179,7 @@ async function startAbortableConversation(event?: SubmitEvent) {
 				controller.abort(new OpenAI.APIUserAbortError());
 				if (mainContainer.contains(restartButton)) {
 					restartButton.classList.remove("rotate");
-					(restartButton as HTMLDivElement).offsetWidth; // Trigger DOM reflow
+					(restartButton as HTMLButtonElement).offsetWidth; // Trigger DOM reflow
 					restartButton.classList.add("rotate");
 				}
 				startAbortableConversation();
@@ -187,6 +194,8 @@ async function startAbortableConversation(event?: SubmitEvent) {
 		divWaiter.style.color = "";
 		divWaiter.style.backgroundColor = "red";
 		divWaiter.textContent = `${error.name || ""}${error.name && error.message ? ": " : ""}${error.message || ""}`;
+		micButton.disabled = true;
+		speakAgainButton.disabled = true;
 		const restartController = new AbortController();
 		const { signal: restartSignal } = restartController;
 		for (const restartButton of restartButtons)

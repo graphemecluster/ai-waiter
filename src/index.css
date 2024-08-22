@@ -308,6 +308,20 @@ h2 {
 	}
 }
 
+button {
+	margin: 0;
+	padding: 0;
+	background: none;
+	appearance: none;
+	border: none;
+	outline: none;
+	transition: opacity 0.15s;
+}
+button:disabled {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
 /* https://codepen.io/henriquetsc/pen/VmVgVe */
 .action-container {
 	position: absolute;
@@ -326,7 +340,8 @@ h2 {
 	cursor: pointer;
 	transition: background-color 0.15s;
 }
-.action-button:hover {
+a.action-button:hover,
+button.action-button:enabled:hover {
 	background-color: lightgrey;
 }
 #mic-button {
@@ -358,7 +373,7 @@ h2 {
 	}
 }
 #mic {
-	position: relative;
+	position: absolute;
 	top: 20px;
 	left: 40px;
 	width: 20px;
